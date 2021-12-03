@@ -29,3 +29,46 @@ options(
 scale_colour_discrete = scale_colour_viridis_d
 scale_fill_discrete = scale_fill_viridis_d
 ```
+
+# Problem 1
+
+## Import the data
+```{r }
+# Check for missing data
+anyNA(read_csv("./data/birthweight.csv"))
+
+birthweight_df = 
+  read_csv("./data/birthweight.csv") %>% 
+  mutate(
+    babysex = case_when(
+      babysex == 1 ~ "Male",
+      babysex == 2 ~ "Female"
+    ),
+    frace = case_when(
+      frace == 1 ~ "White",
+      frace == 2 ~ "Black",
+      frace == 3 ~ "Asian",
+      frace == 4 ~ "Puerto Rican",
+      frace == 8 ~ "Other",
+      frace == 9 ~ "Unknown"
+    ),
+    malform = case_when(
+      malform == 0 ~ "absent", 
+      malform == 1 ~ "present"
+    ),
+    mrace = case_when(
+      mrace == 1 ~ "White", 
+      mrace == 2 ~ "Black", 
+      mrace == 3 ~ "Asian", 
+      frace == 4 ~ "Puerto Rican",
+      frace == 8 ~ "Other"
+    )
+  ) %>% 
+  mutate(
+    babysex = as.factor(babysex),
+    frace = as.factor(frace),
+    malform = as.factor(malform),
+    mrace = as.factor(mrace)
+  ) 
+```
+
