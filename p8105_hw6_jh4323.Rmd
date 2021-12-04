@@ -160,3 +160,103 @@ cv_df %>%
 From the plot, we can see that among three models, the model 1 has the lowest RMSE, which indicates that it is a better model than the other two models.
 
 
+## Problem 2
+
+```{r import_data}
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2017-01-01",
+    date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything())
+```
+
+let's bootstrap
+
+```{r bootstrap}
+weather_boot =
+  weather_df %>% 
+  drop_na() %>% 
+  bootstrap(5000, id = "strap_number") %>% 
+  mutate(
+    models = map(.x = strap, ~lm(tmax ~ tmin, data = .x)),
+    results = map(models, broom::tidy),
+    result_r = map(models, broom::glance)
+  ) %>% 
+  select(strap_number, results, result_r) %>% 
+  unnest(results, result_r)
+```
+
+Calculate $log(\beta_{0} * \beta_{1})$
+
+```{r callog}
+callog =
+  weather_boot %>% 
+  dplyr::select(strap_number, term, estimate) %>% 
+  pivot_wider(names_from = term,
+              values_from = estimate) %>% 
+  rename(intercept ="(Intercept)") %>% 
+  mutate(logBB = log10(intercept*tmin))
+```
+
+Plot the distribution of $log(\beta_{0} * \beta_{1})$
+
+```{r densi_BB}
+callog %>% 
+  ggplot(aes(x = logBB)) +
+  geom_density() + 
+  xlab("log(B0 * B1)") +
+  ggtitle("Distribution of log(B0 * B1)")
+```
+
+It could find from the figure that the distribution of $log(\beta_{0} * \beta_{1})$ is approximately normal, when $log(\beta_{0} * \beta_{1})$ around 0.875, it has maximum density. The distribution is little right-skewed, which may be better with higher bootstrap times.
+
+
+Calculate the 95% CI
+
+```{r CI_BB}
+callog %>% 
+  summarize(
+    ci_lower = quantile(logBB, 0.025),
+    ci_upper = quantile(logBB, 0.975)
+  ) %>% 
+  knitr::kable()
+```
+
+Calculate $r^2$
+
+```{r r_square}
+r_square =
+  weather_boot %>% 
+  filter(term == "tmin") %>% 
+  dplyr::select(r.squared) 
+```
+
+Plot the distribution of  $r^2$
+
+```{r densi_r}
+r_square %>% 
+  ggplot(aes(x = r.squared)) +
+  geom_density() + 
+  xlab("r square") +
+  ggtitle("Distribution of r square")
+```
+
+It could find from the figure that the distribution of  $r^2$ is approximately normal, when  $r^2$ around 0.91, it has maximum density. $r^2$ indicates the percentage of the response variable variation that is explained by a linear model. When $r^2$ is closer to 1, it means model fit data better. From the distribution, it seems the model shows good fitness to the data.
+
+
+Calculate the 95% CI
+
+```{r CI_r}
+r_square %>% 
+  summarize(
+    ci_lower = quantile(r.squared, 0.025),
+    ci_upper = quantile(r.squared,0.975)
+  ) %>% 
+  knitr::kable()
+```
