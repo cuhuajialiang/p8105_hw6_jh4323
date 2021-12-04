@@ -72,3 +72,91 @@ birthweight_df =
   ) 
 ```
 
+## Set two models 
+```{r}
+model1 = lm(bwt ~ blength + gaweeks, data = birthweight_df)
+broom::tidy(model1)
+model2 = lm(bwt ~ bhead + blength + babysex + bhead*blength + blength*babysex + bhead*babysex + bhead*blength*babysex, data = birthweight_df)
+broom::tidy(model2)
+```
+
+## Propose a model
+
+**1. Predictor Selection - We use backward to build the model**
+
+We fit a regression using all predictors, and use AIC criterion for var selection, from which we choose the model with the smallest value.
+
+```{r }
+all_fit = lm(bwt ~ babysex + bhead + blength + fincome + frace + gaweeks + malform + menarche + mheight + momage + mrace + parity + pnumlbw + pnumsga + ppbmi + ppwt + smoken + wtgain,data = birthweight_df)
+broom::tidy(all_fit) 
+step(all_fit, direction = 'backward') %>% broom::tidy()
+```
+
+**2. Get the final model**
+
+According to the result of first step, we can get some reasonable predictors which we can use to build the model.
+
+```{r }
+best_model = lm(bwt ~ fincome + frace + parity + mrace + babysex + mheight+ ppwt+ gaweeks + smoken + wtgain + blength + bhead, data = birthweight_df)
+broom::tidy(best_model)
+```
+
+**3. Make a plot of the "best" model**
+
+```{r }
+# a plot of model residuals against fitted values
+birthweight_df %>% 
+  add_residuals(best_model) %>% 
+  add_predictions(best_model) %>% 
+  ggplot(aes( x = pred, y = resid)) +
+  geom_point(alpha = 0.3)
+
+```
+
+Everything is centered around 0, and it makes sense, and most points are scatter around roughly prediction = 3200, but there are some departure towards left in prediction and some towards up in residuals, which means that if baby birth weight tends low, the residuals will become high.
+
+
+## Compare these models
+
+**1. Cross Validation**
+```{r }
+cv_df = 
+  crossv_mc(birthweight_df, 100)
+cv_df = 
+  cv_df %>% 
+  mutate(
+    firmod = map(.x = train, ~lm(bwt ~ blength + gaweeks, data = birthweight_df)),
+    secmod = map(.x = train, ~lm(bwt ~ bhead + blength + babysex + bhead*blength + blength*babysex + bhead*babysex + bhead*blength*babysex, data = birthweight_df)),
+    bestmod = map(.x = train, ~lm(bwt ~ fincome + frace + parity + mrace + babysex + mheight+ ppwt+ gaweeks + smoken + wtgain + blength + bhead, data = birthweight_df))
+  ) %>% 
+  mutate(
+    rmse_model1 = map2_dbl(.x = firmod, .y = test, ~rmse(model = .x, data =.y)),
+    rmse_model2 = map2_dbl(.x = secmod, .y = test, ~rmse(model = .x, data =.y)),
+    rmse_bestmodel = map2_dbl(.x = bestmod, .y = test, ~rmse(model = .x, data =.y))
+  )
+```
+
+
+**2. See the distribution of three models RMSE**
+```{r }
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(
+    everything(),
+    names_to = "model",
+    values_to = "rmse",
+    names_prefix = "rmse_"
+  ) %>% 
+  ggplot(aes(x = model, y = rmse, color = model)) +
+  geom_violin() +
+  stat_summary(fun = "median", color = "blue") +
+  labs(
+    x = "Model",
+    y = "RMSE",
+    title = "RMSEs of Different Models"
+  )
+```
+
+From the plot, we can see that among three models, the model 1 has the lowest RMSE, which indicates that it is a better model than the other two models.
+
+
