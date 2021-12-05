@@ -247,7 +247,7 @@ r_square %>%
   ggtitle("Distribution of r square")
 ```
 
-It could find from the figure that the distribution of  $r^2$ is approximately normal, when  $r^2$ around 0.91, it has maximum density. $r^2$ indicates the percentage of the response variable variation that is explained by a linear model. When $r^2$ is closer to 1, it means model fit data better. From the distribution, it seems the model shows good fitness to the data.
+From the figure, we could find that the distribution of  $r^2$ is approximately normal, when  $r^2$ around 0.91, it has maximum density. $r^2$ indicates the percentage of the response variable variation that is explained by a linear model. When $r^2$ is closer to 1, it means model fit data better. From the distribution, it seems the model shows good fitness to the data.
 
 
 Calculate the 95% CI
